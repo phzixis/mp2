@@ -4,6 +4,7 @@ This game is a parody of Nintendo's Super Smash Brothers Series. After the trage
 
 ## Fight! As you battle to the death with yourself! 
 ![image_1](https://i.imgur.com/O8pOovN.png)
+
 Choose to play as Kirby or Kirby! 
 
 
