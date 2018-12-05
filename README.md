@@ -1,4 +1,4 @@
-![Main Logo](logo.png)
+![Main Logo](https://imgur.com/a/M8LWJ5e)
 # Introduction
 This game is a parody of Nintendo's Super Smash Brothers Series. After the tragedy, all of Kirby's friends have died and now he can only fight with himself. 
 
