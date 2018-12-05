@@ -7,7 +7,15 @@ This game is a parody of Nintendo's Super Smash Brothers Series. After the trage
 
 Choose to play as Kirby or Kirby! 
 
+## 3 different stages to choose from!
+![image_2](https://i.imgur.com/bdfmjUG.png)
 
+Because why not!
+
+## Brag with your friends about your stats!
+![image_3](https://i.imgur.com/30yfIRg.png)
+
+Assuming you have a decent one that is.
 
 # Credits
 ### Kirby Sprites
