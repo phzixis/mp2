@@ -1,3 +1,3 @@
-<img src = "logo.png">
-<h1>Welcome!</h1>
+![Main Logo](logo.png)
+
 
