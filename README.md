@@ -3,8 +3,8 @@
 This game is a parody of Nintendo's Super Smash Brothers Series. After the tragedy, all of Kirby's friends have died and now he can only fight with himself. 
 
 ## Fight! As you battle to the death with yourself! 
-
-## Choose to play as Kirby or Kirby! 
+![image_1](https://imgur.com/O8pOovN)
+Choose to play as Kirby or Kirby! 
 
 
 
