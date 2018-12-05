@@ -1,10 +1,10 @@
 ![Main Logo](logo.png)
-#Introduction
+# Introduction
 This game is a parody of Nintendo's Super Smash Brothers Series. After the tragedy, all of Kirby's friends have died and now he can only fight with himself. 
 
 In this game, you can choose to play as Kirby or Kirby! 
 
-#Credits
+# Credits
 Kirby Sprites
 			https://www.spriters-resource.com/custom_edited/supersmashbroscustoms/sheet/17186/
 Stages
