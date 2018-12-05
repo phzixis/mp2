@@ -5,31 +5,37 @@ from pyglet.gl import *
 
 #   Create window, background and camera
 window = pyglet.window.Window()
-background_stream = pyglet.image.load('background.png', file=open('background.png', 'rb'))
-background = pyglet.sprite.Sprite(background_stream, x=0, y=0)
-camera = objects.Camera()
 
 #   Runs 120 times per second
 def update(dt):
     engine.update()
-    camera.update()
-    glMatrixMode(GL_PROJECTION)
-    glLoadIdentity()
-    glOrtho(0, camera.width, 0, camera.height, -1, 1)
-    glTranslatef(-camera.x, -camera.y, 0)
-    glScalef(camera.toZoom, camera.toZoom, 1)
-    glMatrixMode(GL_MODELVIEW)
+    if engine.gameStarted:
+        engine.camera.update()
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        glOrtho(0, engine.camera.width, 0, engine.camera.height, -1, 1)
+        glTranslatef(-engine.camera.x, -engine.camera.y, 0)
+        glScalef(engine.camera.toZoom, engine.camera.toZoom, 1)
+        glMatrixMode(GL_MODELVIEW)
 
 #   The objects to be drawn on screen
 @window.event
 def on_draw():
     window.clear()
-    background.draw()
-    engine.player1.sprite.draw()
-    engine.player2.sprite.draw()
-    for box in engine.hitboxes:
-        box.sprite.draw()
+    for object in engine.toDraw:
+        object.draw()
 
+@window.event
+def on_mouse_press(x, y, button, modifiers):
+    if engine.gameState == "MainMenu":
+        for icon in engine.levelSelectIcons:
+            if icon.x < x < icon.x + icon.width and icon.y < y < icon.y + icon.height:
+                engine.levelSelected(icon)
+        if 280 < x < 365 and 80 < y < 110:
+            engine.showStatsScreen()
+    elif engine.gameState == "StatsScreen":
+        if 0 < x < 100 and 0 < y < 30:
+            engine.endGame()
 #   Detect on button press
 @window.event
 def on_key_press(symbol, modifier):
@@ -56,11 +62,11 @@ def on_key_press(symbol, modifier):
         engine.player2.input.left = True
     if symbol == key.RIGHT:
         engine.player2.input.right = True
-    if symbol == key.NUM_2:
+    if symbol == key.NUM_2 or symbol == key.N:
         engine.player2.input.a = True
-    if symbol == key.NUM_3:
+    if symbol == key.NUM_3 or symbol == key.M:
         engine.player2.input.b = True
-    if symbol == key.NUM_1:
+    if symbol == key.NUM_1 or symbol == key.B:
         engine.player2.input.j = True
 
 #   Detect on button release
@@ -100,13 +106,13 @@ def on_key_release(symbol, modifier):
     if symbol == key.RIGHT:
         engine.player2.input.right = False
         engine.player2.input.releaseRight = True
-    if symbol == key.NUM_2:
+    if symbol == key.NUM_2 or symbol == key.N:
         engine.player2.input.a = False
         engine.player2.input.releaseA = True
-    if symbol == key.NUM_3:
+    if symbol == key.NUM_3 or symbol == key.M:
         engine.player2.input.b = False
         engine.player2.input.releaseB = True
-    if symbol == key.NUM_1:
+    if symbol == key.NUM_1 or symbol == key.B:
         engine.player2.input.j = False
         engine.player2.input.releaseJ = True
 

@@ -58,14 +58,22 @@ spriteDictionary = {"idle": [pyglet.resource.image("idle.png", flip_x=False)],
                     "forwardSpecialF": [(pyglet.resource.image("forwardspecial" + str(i) + ".png", flip_x=True)) for i in range(1, 12)],
                     "forwardAerialSpecial": [(pyglet.resource.image("forwardaerialspecial" + str(i) + ".png", flip_x=False)) for i in range(1, 9)],
                     "forwardAerialSpecialF": [(pyglet.resource.image("forwardaerialspecial" + str(i) + ".png", flip_x=True)) for i in range(1, 9)],
-                    "upwardSpecial": [(pyglet.resource.image("upwardspecial" + str(i) + ".png", flip_x=False)) for i in range(1, 14)],
-                    "upwardSpecialF": [(pyglet.resource.image("upwardspecial" + str(i) + ".png", flip_x=True)) for i in range(1, 14)],
-                    "downwardSpecial": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=False)) for i in range(1, 12)],
-                    "downwardSpecialF": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=True)) for i in range(1, 12)],
+                    "upwardSpecial": [(pyglet.resource.image("upwardspecial" + str(i) + ".png", flip_x=False)) for i in range(3, 12)],
+                    "upwardSpecialF": [(pyglet.resource.image("upwardspecial" + str(i) + ".png", flip_x=True)) for i in range(3, 12)],
+                    "downwardSpecial1": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=False)) for i in range(2, 4)],
+                    "downwardSpecial2": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=False)) for i in range(4, 6)],
+                    "downwardSpecial3": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=False)) for i in range(6, 8)],
+                    "downwardSpecial4": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=False)) for i in range(8, 10)],
+                    "downwardSpecial5": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=False)) for i in range(10, 12)],
+                    "downwardSpecial1F": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=True)) for i in range(2, 4)],
+                    "downwardSpecial2F": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=True)) for i in range(4, 6)],
+                    "downwardSpecial3F": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=True)) for i in range(6, 8)],
+                    "downwardSpecial4F": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=True)) for i in range(8, 10)],
+                    "downwardSpecial5F": [(pyglet.resource.image("downwardspecial" + str(i) + ".png", flip_x=True)) for i in range(10, 12)],
                     "hurt": [(pyglet.resource.image("hurt" + str(i) + ".png", flip_x=False)) for i in range(1, 9)],
                     "hurtF": [(pyglet.resource.image("hurt" + str(i) + ".png", flip_x=True)) for i in range(1, 9)],
                     "ledge": [(pyglet.resource.image("ledge.png", flip_x=False))],
-                    "ledgeF": [(pyglet.resource.image("ledge.png", flip_x=True))],
+                    "ledgeF": [(pyglet.resource.image("ledge.png", flip_x=True))]
                     }
 
 class Player:
@@ -79,6 +87,8 @@ class Player:
         self.acceleration = 1.2
         self.direction = 1
         self.jumpCounter = 0
+        self.aerialAttacked = 0
+        self.aerialSpecialed = 0
         self.isSmashing = False
         self.isGrounded = False
         self.isGrabbing = False
@@ -96,6 +106,11 @@ class Player:
         self.upward = False
         self.downward = False
         self.canBeHit = True
+        self.isUpSpecial = True
+        self.cancelUpSpecial = False
+        self.isRock = False
+        self.regainMomentum = False
+        self.isDead = False
         self.basicAttackCounter = 0
         self.smashCounter = 0
         self.hitboxes = []
@@ -103,12 +118,14 @@ class Player:
         self.orientation = "right"
         self.anim = None
         self.spritexPosition = 0
-
+        self.hurtSprite = pyglet.image.Animation.from_image_sequence(spriteDictionary["hurt"], 1 / 30, False)
+        self.hurtSpriteF = pyglet.image.Animation.from_image_sequence(spriteDictionary["hurtF"], 1 / 30, False)
         self.sprites = spriteDictionary["idle"]
         self.anim = pyglet.image.Animation.from_image_sequence(self.sprites, 0.5, True)
         self.sprite = pyglet.sprite.Sprite(self.anim)
         self.xScale = 1
         self.yScale = 1
+        self.score = 0
 
         self.box = objects.Box(xPosition, yPosition, self.sprite.width * self.xScale, self.sprite.height * self.yScale)
 
@@ -121,11 +138,15 @@ class Player:
     def update(self):
         #   Interact with platforms (colliding, landing, grabbing, etc.)
         self.platformInteraction()
-
+        if self.isRock:
+            self.attack(0, 0, 25, 25, 0, 18, 10, 80, 1)
         #   Respawn
-        if self.box.xPosition < -50 or self.box.xPosition > 690 or  self.box.yPosition < -50 or self.box.yPosition > 530 :
-            self.box.xPosition = 320
-            self.box.yPosition = 240
+        if (self.box.xPosition < -50 or self.box.xPosition > 690 or  self.box.yPosition < -50 or self.box.yPosition > 530) and not self.isDead:
+            self.box.xPosition = 1000
+            self.opponent.score += 1
+            self.isDead = True
+            Timer(3, self.respawn).start()
+            engine.playexplosion()
 
         for box in self.hitboxes:
             box.update()
@@ -139,6 +160,10 @@ class Player:
         if self.input.j:
             #   self.releasedJump makes sure the jumping only happens on a single frame
             if self.input.releaseJ:
+                if self.isRock:
+                    self.canMove = True
+                    self.canAttack = True
+                    self.isRock = False
                 if self.canMove and self.canAttack:
                     if self.jumpCounter == 0:
                         self.changeSprites("jump" + self.spritePrefix, 30, False)
@@ -157,6 +182,7 @@ class Player:
                     self.isGrabbing = False
                     self.canGrab = False
                     self.canMove = True
+                    self.canAttack = True
                     Timer(.5, self.grabTimer).start()
         if self.jumpCounter >= 5 and self.yVelocity < 0:
             self.changeSprites("noJump" + self.spritePrefix, 30, False)
@@ -246,7 +272,7 @@ class Player:
                                 Timer(.2, self.attackRecover).start()
                             elif 2 <= self.basicAttackCounter <= 7:
                                 if self.basicAttackCounter == 7:
-                                    self.attack(20, 0, 25, 20, 0, 3, 5, 30, 1)
+                                    self.attack(20, 0, 35, 25, 0, 3, 5, 45, 1)
                                     self.anim = pyglet.image.Animation.from_image_sequence([spriteDictionary["basicAttack3" + self.spritePrefix][3]], 30, False)
                                 else:
                                     self.attack(20, 0, 25, 20, 0, 1, 1, 60, 1)
@@ -260,7 +286,7 @@ class Player:
 
                             Timer(.5, lambda: self.basicAttackReset(attackCounter)).start()
                         self.canAttack = False
-                else:
+                elif self.aerialAttacked < 2:
                     if (self.input.right and self.direction == 1) or (self.input.left and self.direction == -1):
                         self.canAttack = False
                         self.canMove = False
@@ -279,15 +305,19 @@ class Player:
                     elif self.input.up:
                         Timer(10 / 30, self.attackRecover).start()
                         self.changeSprites("upwardAerial" + self.spritePrefix, 30, False)
-                        self.attack(15, 0, 15, 10, 3, 13, 20, 0, 1)
+                        self.attack(0, 20, 30, 20, 4, 9, 5, 80, 2)
                     elif self.input.down:
                         Timer(10 / 30, self.attackRecover).start()
                         self.changeSprites("downwardAerial" + self.spritePrefix, 30, False)
-                        self.attack(15, 0, 15, 10, 3, 10, 10, 0, 1)
+                        self.attack(5, -10, 15, 25, 3, 2, 5, 275, 10)
+                        self.cancelUpSpecial = False
+                        self.upSpecial()
+                        Timer(.5, self.upSpecial2).start()
                     else:
                         Timer(10 / 30, self.attackRecover).start()
                         self.changeSprites("basicAerial" + self.spritePrefix, 30, False)
-                        self.attack(15, 0, 15, 10, 3, 10, 10, 0, 1)
+                        self.attack(0, 0, 40, 40, 2, 10, 4, 45, 8)
+                    self.aerialAttacked += 1
                 self.input.releaseA = False
 
             if self.input.b and not self.isGrabbing and self.input.releaseB:
@@ -295,27 +325,61 @@ class Player:
                     self.canAttack = False
                     self.canMove = False
                     if self.input.right or self.input.left:
-                        Timer(30 / 30, self.attackRecover).start()
+                        Timer(1, self.attackRecover).start()
                         self.changeSprites("forwardSpecial" + self.spritePrefix, 30, False)
-                        self.attack(15, 0, 15, 10, 3, 10, 10, 0, 1)
+                        self.attack(25, 0, 25, 25, 9, 19, 7, 35, 5)
                     elif self.input.up:
-                        print("UpSpecial")
-                        Timer(.5, self.attackRecover).start()
+                        self.changeSprites("upwardSpecial" + self.spritePrefix, 30, False)
+                        self.attack(25, 0, 25, 25, 0, 5, 3, 80, 8)
+                        self.attack(25, 0, 25, 25, 15, 5, 3, 280, 8)
+                        self.yVelocity = 10
+                        self.isGrounded = False
+                        self.isUpSpecial = True
+                        self.cancelUpSpecial = False
+                        Timer(.4, self.upSpecial).start()
+                        Timer(2, self. upSpecial2).start()
+                        Timer(1, self.attackRecover).start()
                     elif self.input.down:
-                        print("DownSpecial")
-                        Timer(.5, self.attackRecover).start()
+                        self.changeSprites("downwardSpecial" + str(random.randint(1, 5)) + self.spritePrefix, 10, False)
+                        self.isRock = True
+                        self.cancelUpSpecial = False
+                        self.isUpSpecial = True
+                        Timer(.2, self.upSpecial).start()
+                        Timer(2, self.upSpecial2).start()
                     else:
                         self.canAttack = True
                         self.canMove = True
-                else:
+                elif self.aerialSpecialed < 2:
                     if self.input.right or self.input.left:
                         Timer(30 / 30, self.attackRecover).start()
                         self.changeSprites("forwardAerialSpecial" + self.spritePrefix, 30, False)
-                        self.attack(15, 0, 15, 10, 3, 10, 10, 0, 1)
+                        self.canAttack = False
+                        self.canMove = False
+                        self.regainMomentum = True
+                        self.attack(10, 10, 40, 40, 2, 15, 6, 40, 8)
                     elif self.input.up:
-                        print("UpAerialSpecial")
+                        self.changeSprites("upwardSpecial" + self.spritePrefix, 30, False)
+                        self.attack(25, 0, 25, 25, 0, 5, 3, 80, 8)
+                        self.attack(25, 0, 25, 25, 15, 5, 3, 280, 8)
+                        self.yVelocity = 10
+                        self.isGrounded = False
+                        self.isUpSpecial = True
+                        self.canMove = False
+                        self.canAttack = False
+                        self.cancelUpSpecial = False
+                        Timer(.4, self.upSpecial).start()
+                        Timer(2, self.upSpecial2).start()
+                        Timer(1, self.attackRecover).start()
                     elif self.input.down:
-                        print("DownAerialSpecial")
+                        self.changeSprites("downwardSpecial" + str(random.randint(1,5)) + self.spritePrefix, 10, False)
+                        Timer(.2, self.upSpecial).start()
+                        self.isRock = True
+                        self.canMove = False
+                        self.canAttack = False
+                        self.cancelUpSpecial = False
+                        self.isUpSpecial = True
+                        Timer(2, self.upSpecial2).start()
+                    self.aerialSpecialed += 1
                 self.input.releaseB = False
         if self.smashing:
             if self.forward:
@@ -377,7 +441,7 @@ class Player:
                     self.changeSprites("idleF", 30, False)
         else:
             self.yVelocity -= objects.yGravity
-            if self.yVelocity < -5:
+            if self.yVelocity < -5 and not self.isUpSpecial:
                 self.yVelocity = -5
         #   If not grabbing ledge, allow movement
 
@@ -390,7 +454,8 @@ class Player:
 
         #   If abs(velocity) is greater than 1, divide it by the friction and if less then one just make it 0
         if abs(self.xVelocity) > 1:
-            self.xVelocity /= self.xFriction
+            if not self.regainMomentum or self.isGrounded:
+                self.xVelocity /= self.xFriction
         else:
             self.xVelocity = 0
 
@@ -410,10 +475,19 @@ class Player:
         if self.basicAttackCounter == n or (self.basicAttackCounter > 7 and n > 7):
             self.basicAttackCounter = 0
     def goHurtSprite(self):
-        self.changeSprites("hurt" + self.opponent.spritePrefix, 30, False)
+        if self.spritePrefix == "":
+            self.sprite = pyglet.sprite.Sprite(self.hurtSprite)
+        elif self.spritePrefix == "F":
+            self.sprite = pyglet.sprite.Sprite(self.hurtSpriteF)
+    def upSpecial(self):
+        if not self.cancelUpSpecial:
+            self.yVelocity = -10
+    def upSpecial2(self):
+        self.isUpSpecial = False
     def attackRecover(self):
         self.canAttack = True
         self.canMove = True
+        self.regainMomentum = False
     def frictionRecover(self):
         self.xFriction = 1.75
     def platformInteraction(self):
@@ -435,7 +509,7 @@ class Player:
                     self.isGrounded = True
                     self.box.yPosition = platform.box.yPosition + platform.box.height
                     self.groundedPlatform = platform
-
+                    self.resetAerial()
                 elif self.box.yPosition + 5 < platform.box.yPosition + platform.box.height < self.box.yPosition + 50:
                     #   If player touches the left ledge, grab it
                     if platform.box.xPosition + 10 > self.box.xPosition + self.box.width + 1 > platform.box.xPosition:
@@ -443,28 +517,33 @@ class Player:
                             self.isGrounded = True
                             self.isGrabbing = True
                             self.canMove = False
+                            self.cancelUpSpecial = True
                             self.box.xPosition = platform.box.xPosition - 20
                             self.box.yPosition = platform.box.yPosition + platform.box.height - 30
                             self.changeSprites("ledge", 30, False)
                             self.direction = 1
                             self.spritexPosition = 0
+                            self.resetAerial()
                     #   If player touches the right ledge, grab it
                     elif platform.box.xPosition + platform.box.width > self.box.xPosition - 1 > platform.box.xPosition + platform.box.width - 10:
                         if self.canGrab:
                             self.isGrounded = True
                             self.isGrabbing = True
                             self.canMove = False
+                            self.cancelUpSpecial = True
                             self.box.xPosition = platform.box.xPosition + platform.box.width
                             self.box.yPosition = platform.box.yPosition + platform.box.height - 30
                             self.changeSprites("ledgeF", 30, False)
                             self.direction = -1
                             self.spritexPosition = self.box.width
+                            self.resetAerial()
                     #   If player is on top of the box, make the player land on the box
                     elif self.box.xPosition + self.box.width > platform.box.xPosition and \
                             self.box.xPosition < platform.box.xPosition + platform.box.width:
                         self.isGrounded = True
                         self.box.yPosition = platform.box.yPosition + platform.box.height
                         self.groundedPlatform = platform
+                        self.resetAerial()
 
                 #   If player touches left or right side of platform don't allow to go any further
                 elif platform.box.yPosition < self.box.yPosition < platform.box.yPosition + platform.box.height:
@@ -484,3 +563,17 @@ class Player:
         self.sprites = spriteDictionary[name]
         self.anim = pyglet.image.Animation.from_image_sequence(self.sprites, 1 / fps, loop)
         self.sprite = pyglet.sprite.Sprite(self.anim)
+    def draw(self):
+        self.sprite.draw()
+    def respawn(self):
+        self.box.yPosition = 0
+        self.box.xPosition = 320
+        self.box.yPosition = 240
+        self.damage = 0
+        self.xVelocity = 0
+        self.yVelocity = 0
+        self.isDead = False
+        self.resetAerial()
+    def resetAerial(self):
+        self.aerialSpecialed = 0
+        self.aerialAttacked = 0

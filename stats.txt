@@ -1,0 +1,4 @@
+player1wins=0
+player2wins=0
+player1totalpoints=0
+player2totalpoints=0
